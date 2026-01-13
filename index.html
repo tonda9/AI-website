@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat V3 (Final)</title>
+    <title>AI Chat - Final Fix</title>
     <style>
         body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; }
         #chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
@@ -15,7 +15,8 @@
         button { padding: 0 25px; background-color: #0078d4; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .typing::after { content: '...'; animation: dots 1.5s steps(5, end) infinite; }
         @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } 100% { content: ''; } }
-        .error { color: #ff5555; }
+        .error { color: #ff5555; font-weight: bold; }
+        .debug-box { background: #000; color: #ffa500; font-family: monospace; font-size: 12px; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ffa500; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -29,11 +30,9 @@
 
     <script>
         // ==========================================
-        // ZDE DEJ TU SVOJI CLOUDFLARE ADRESU
-        // Nezapomeň na HTTPS a koncovku /webhook/chat
+        // ZDE SI ZKONTROLUJ ADRESU
         // ==========================================
-       // ZKONTROLUJ TENTO ŘÁDEK VE SVÉM HTML:
-    const WEBHOOK_URL = "https://tondait4.serveousercontent.com/webhook/chat";
+        const WEBHOOK_URL = "http://localhost:5678/webhook-test/chat";
 
         async function sendMessage() {
             const inputField = document.getElementById("user-input");
@@ -42,73 +41,89 @@
 
             if (!text) return;
 
-            // 1. Zobrazíme uživatele
+            // 1. Zobraz uživatele
             createMessageElement(text, "user");
             inputField.value = "";
             sendBtn.disabled = true;
 
-            // 2. Vytvoříme bublinu pro AI (a držíme si ji v proměnné aiBubble)
+            // 2. AI bublina
             const aiBubble = createMessageElement("", "ai", true);
 
             try {
+                // Přidáváme speciální hlavičky, aby to prošlo přes tunel
                 const response = await fetch(WEBHOOK_URL, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "ngrok-skip-browser-warning": "true",
+                        "bypass-tunnel-reminder": "true"
+                    },
                     body: JSON.stringify({ message: text })
                 });
 
-                if (!response.ok) throw new Error(`HTTP Chyba: ${response.status}`);
+                // Pokud server vrátí chybu (např. 404 nebo 500)
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status} (${response.statusText})`);
+                }
 
-                // Přečteme odpověď jako text
+                // Přečteme odpověď jako surový text
                 const rawText = await response.text();
                 let finalAnswer = "";
 
-                // --- LOGIKA ČTENÍ ODPOVĚDI (Vylepšená) ---
+                // --- 🔍 DETEKTIVNÍ PRÁCE: Hledáme odpověď ---
+                try {
+                    let json = JSON.parse(rawText);
 
-                // Pokus 1: Je to n8n JSON stream?
-                const lines = rawText.split('\n');
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    try {
-                        const json = JSON.parse(line);
-                        // Hledáme text uvnitř JSONu
-                        if (json.content) finalAnswer += json.content;
-                        else if (json.output) finalAnswer += json.output;
-                        else if (json.json && json.json.content) finalAnswer += json.json.content;
-                    } catch (e) {
-                        // Není to JSON, ignorujeme
+                    // 1. Pokud je to pole (n8n to někdy dělá), vezmeme první prvek
+                    if (Array.isArray(json)) {
+                        json = json[0];
                     }
+
+                    // 2. Hledáme text všude možně
+                    if (json.output) finalAnswer = json.output;
+                    else if (json.content) finalAnswer = json.content;
+                    else if (json.message) finalAnswer = json.message;
+                    else if (json.choices && json.choices[0]?.message?.content) {
+                        finalAnswer = json.choices[0].message.content; // Přímo od AI
+                    }
+                    else if (json.text) finalAnswer = json.text;
+                    else {
+                        // Pokud je to JSON, ale divný, převedeme ho celý na text, ať vidíme, co to je
+                        finalAnswer = JSON.stringify(json);
+                    }
+
+                } catch (e) {
+                    // Není to JSON, je to čistý text
+                    finalAnswer = rawText;
                 }
 
-                // Pokus 2: Pokud JSON nic nenašel, je to prostě čistý text? (Tvůj případ!)
-                if (!finalAnswer && rawText.trim().length > 0) {
-                    // Pokud to nevypadá jako systémová zpráva n8n, použijeme to celé
-                    if (!rawText.includes('{"type":')) {
-                        finalAnswer = rawText;
-                    }
-                }
-
-                // --- VÝPIS ---
+                // --- 🏁 VÝPIS VÝSLEDKU ---
                 aiBubble.classList.remove("typing");
 
-                if (finalAnswer) {
+                if (finalAnswer && finalAnswer.trim().length > 0) {
+                    // Máme odpověď! Vyčistíme uvozovky, pokud jsou na začátku a konci
+                    if (typeof finalAnswer === 'string' && finalAnswer.startsWith('"') && finalAnswer.endsWith('"')) {
+                        finalAnswer = finalAnswer.slice(1, -1);
+                    }
                     aiBubble.innerText = finalAnswer;
                 } else {
-                    // Pokud je odpověď opravdu prázdná
-                    aiBubble.innerHTML = "<span class='error'>Server nic neodpověděl.</span>";
-                    console.log("Raw Response:", rawText);
+                    // --- 🛑 DEBUG MÓD: Když je odpověď prázdná ---
+                    aiBubble.innerHTML = `
+                        <span class="error">⚠️ Nevidím text odpovědi</span>
+                        <div class="debug-box">Server poslal tato data (zkopíruj mi to):<br>${rawText.replace(/</g, "&lt;")}</div>
+                    `;
+                    console.log("DEBUG RAW:", rawText);
                 }
 
             } catch (error) {
                 aiBubble.classList.remove("typing");
-                aiBubble.innerHTML = `<span class='error'>Chyba: ${error.message}</span>`;
+                aiBubble.innerHTML = `<span class="error">Chyba spojení: ${error.message}</span>`;
             } finally {
                 sendBtn.disabled = false;
                 scrollToBottom();
             }
         }
 
-        // Funkce pro vytvoření bubliny (vrací přímo HTML element, ne ID)
         function createMessageElement(text, sender, isTyping = false) {
             const container = document.getElementById("chat-container");
             const div = document.createElement("div");
