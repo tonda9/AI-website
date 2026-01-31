@@ -3,36 +3,370 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat - Final Fix</title>
+    <title>AI Chat Assistant</title>
     <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; }
-        #chat-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .message { max-width: 80%; padding: 12px 18px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; }
-        .user { align-self: flex-end; background-color: #0078d4; color: white; border-bottom-right-radius: 2px; text-align: right; }
-        .ai { align-self: flex-start; background-color: #2d2d2d; border: 1px solid #3d3d3d; border-bottom-left-radius: 2px; text-align: left; }
-        .input-area { padding: 20px; background-color: #1e1e1e; border-top: 1px solid #333; display: flex; gap: 10px; }
-        input { flex: 1; padding: 15px; border-radius: 8px; border: 1px solid #333; background: #2d2d2d; color: white; outline: none; }
-        button { padding: 0 25px; background-color: #0078d4; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .typing::after { content: '...'; animation: dots 1.5s steps(5, end) infinite; }
-        @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60% { content: '...'; } 100% { content: ''; } }
-        .error { color: #ff5555; font-weight: bold; }
-        .debug-box { background: #000; color: #ffa500; font-family: monospace; font-size: 12px; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ffa500; white-space: pre-wrap; }
+        * {
+            box-sizing: border-box;
+        }
+        
+        body { 
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e0e0e0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            margin: 0;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .header-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .header-subtitle {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 2px;
+        }
+        
+        .status-indicator {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Chat Container */
+        #chat-container { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 25px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+        
+        #chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        #chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        #chat-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Messages */
+        .message { 
+            max-width: 75%; 
+            padding: 14px 20px; 
+            border-radius: 18px; 
+            line-height: 1.6; 
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-out;
+            position: relative;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .user { 
+            align-self: flex-end; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .ai { 
+            align-self: flex-start; 
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .message-wrapper.user-wrapper {
+            align-items: flex-end;
+        }
+        
+        .message-wrapper.ai-wrapper {
+            align-items: flex-start;
+        }
+        
+        .message-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 0 8px;
+        }
+        
+        /* Input Area */
+        .input-area { 
+            padding: 20px 25px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex; 
+            gap: 12px;
+        }
+        
+        input { 
+            flex: 1; 
+            padding: 16px 20px; 
+            border-radius: 25px; 
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.08);
+            color: white; 
+            outline: none;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        
+        input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        button { 
+            padding: 16px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            border: none; 
+            border-radius: 25px; 
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 4px;
+        }
+        
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        
+        .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+        }
+        
+        /* Error & Debug */
+        .error { 
+            color: #ff6b6b; 
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .debug-box { 
+            background: rgba(0, 0, 0, 0.5);
+            color: #fbbf24;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        /* Welcome Message */
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .welcome-message h2 {
+            color: #fff;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .welcome-message p {
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .header {
+                padding: 12px 15px;
+            }
+            
+            .header-title {
+                font-size: 1.1rem;
+            }
+            
+            .header-subtitle {
+                display: none;
+            }
+            
+            #chat-container {
+                padding: 15px;
+            }
+            
+            .message {
+                max-width: 85%;
+                padding: 12px 16px;
+            }
+            
+            .input-area {
+                padding: 15px;
+            }
+            
+            input {
+                padding: 14px 18px;
+            }
+            
+            button {
+                padding: 14px 20px;
+            }
+            
+            button span.btn-text {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div id="chat-container"></div>
+    <div class="header">
+        <div class="header-icon">🤖</div>
+        <div>
+            <div class="header-title">AI Chat Assistant</div>
+            <div class="header-subtitle">Powered by AI</div>
+        </div>
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>Online</span>
+        </div>
+    </div>
+
+    <div id="chat-container">
+        <div class="welcome-message">
+            <h2>👋 Vítejte!</h2>
+            <p>Napište zprávu a začněte konverzaci s AI asistentem.</p>
+        </div>
+    </div>
 
     <div class="input-area">
-        <input type="text" id="user-input" placeholder="Napiš zprávu..." onkeypress="handleEnter(event)">
-        <button id="send-btn" onclick="sendMessage()">Odeslat</button>
+        <input type="text" id="user-input" placeholder="Napište zprávu..." onkeypress="handleEnter(event)">
+        <button id="send-btn" onclick="sendMessage()">
+            <span class="btn-text">Odeslat</span>
+            <span>➤</span>
+        </button>
     </div>
 
     <script>
         // ==========================================
-        // ZDE SI ZKONTROLUJ ADRESU
+        // WEBHOOK URL - Change this to your endpoint
         // ==========================================
         const WEBHOOK_URL = "https://tondait4.serveousercontent.com/webhook/chat";
+        
+        let isFirstMessage = true;
 
         async function sendMessage() {
             const inputField = document.getElementById("user-input");
@@ -41,83 +375,143 @@
 
             if (!text) return;
 
-            // 1. Zobraz uživatele
+            // Remove welcome message on first message
+            if (isFirstMessage) {
+                const welcome = document.querySelector('.welcome-message');
+                if (welcome) welcome.remove();
+                isFirstMessage = false;
+            }
+
+            // 1. Display user message
             createMessageElement(text, "user");
             inputField.value = "";
             sendBtn.disabled = true;
+            inputField.focus();
 
-            // 2. AI bublina
+            // 2. Create AI bubble with typing indicator
             const aiBubble = createMessageElement("", "ai", true);
 
             try {
-                // Přidáváme speciální hlavičky, aby to prošlo přes tunel
                 const response = await fetch(WEBHOOK_URL, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "ngrok-skip-browser-warning": "true",
-                        "bypass-tunnel-reminder": "true"
+                        "bypass-tunnel-reminder": "true",
+                        "Accept": "application/json, text/plain, */*"
                     },
                     body: JSON.stringify({ message: text })
                 });
 
-                // Pokud server vrátí chybu (např. 404 nebo 500)
+                // Handle HTTP errors
                 if (!response.ok) {
                     throw new Error(`HTTP Error: ${response.status} (${response.statusText})`);
                 }
 
-                // Přečteme odpověď jako surový text
+                // Read raw response text
                 const rawText = await response.text();
                 let finalAnswer = "";
+                
+                console.log("📥 Raw response:", rawText);
+                console.log("📊 Response headers:", [...response.headers.entries()]);
 
-                // --- 🔍 DETEKTIVNÍ PRÁCE: Hledáme odpověď ---
+                // --- Parse response: try multiple formats ---
                 try {
                     let json = JSON.parse(rawText);
+                    console.log("📋 Parsed JSON:", json);
 
-                    // 1. Pokud je to pole (n8n to někdy dělá), vezmeme první prvek
+                    // Handle array responses (n8n sometimes returns arrays)
                     if (Array.isArray(json)) {
+                        console.log("📦 Response is an array, taking first element");
                         json = json[0];
                     }
 
-                    // 2. Hledáme text všude možně
-                    if (json.output) finalAnswer = json.output;
-                    else if (json.content) finalAnswer = json.content;
-                    else if (json.message) finalAnswer = json.message;
-                    else if (json.choices && json.choices[0]?.message?.content) {
-                        finalAnswer = json.choices[0].message.content; // Přímo od AI
+                    // Try to find the answer in various common response fields
+                    // Extended list of possible field names
+                    const possibleFields = [
+                        'output', 'content', 'message', 'text', 'answer', 'response', 
+                        'reply', 'result', 'data', 'body', 'completion', 'generated_text'
+                    ];
+                    
+                    // Check top-level fields
+                    for (const field of possibleFields) {
+                        if (json[field] && typeof json[field] === 'string') {
+                            finalAnswer = json[field];
+                            console.log(`✅ Found answer in field: ${field}`);
+                            break;
+                        }
                     }
-                    else if (json.text) finalAnswer = json.text;
-                    else {
-                        // Pokud je to JSON, ale divný, převedeme ho celý na text, ať vidíme, co to je
-                        finalAnswer = JSON.stringify(json);
+                    
+                    // Check nested structures if not found yet
+                    if (!finalAnswer) {
+                        // OpenAI-style response
+                        if (json.choices && json.choices[0]?.message?.content) {
+                            finalAnswer = json.choices[0].message.content;
+                            console.log("✅ Found answer in choices[0].message.content");
+                        }
+                        // Alternative OpenAI format
+                        else if (json.choices && json.choices[0]?.text) {
+                            finalAnswer = json.choices[0].text;
+                            console.log("✅ Found answer in choices[0].text");
+                        }
+                        // n8n format with nested output
+                        else if (json.output && typeof json.output === 'object' && json.output.text) {
+                            finalAnswer = json.output.text;
+                            console.log("✅ Found answer in output.text");
+                        }
+                        // Response wrapper format
+                        else if (json.response && typeof json.response === 'object') {
+                            finalAnswer = json.response.text || json.response.content || json.response.message || JSON.stringify(json.response);
+                            console.log("✅ Found answer in response object");
+                        }
+                        // Data wrapper format
+                        else if (json.data && typeof json.data === 'object') {
+                            finalAnswer = json.data.text || json.data.content || json.data.message || json.data.output || JSON.stringify(json.data);
+                            console.log("✅ Found answer in data object");
+                        }
+                        // If still nothing, stringify the whole object
+                        else if (!finalAnswer) {
+                            finalAnswer = JSON.stringify(json, null, 2);
+                            console.log("⚠️ Using stringified JSON as answer");
+                        }
                     }
 
                 } catch (e) {
-                    // Není to JSON, je to čistý text
+                    // Not JSON, treat as plain text
+                    console.log("📝 Response is plain text, not JSON");
                     finalAnswer = rawText;
                 }
 
-                // --- 🏁 VÝPIS VÝSLEDKU ---
-                aiBubble.classList.remove("typing");
+                // --- Display result ---
+                // Remove typing indicator
+                const typingIndicator = aiBubble.querySelector('.typing-indicator');
+                if (typingIndicator) typingIndicator.remove();
 
                 if (finalAnswer && finalAnswer.trim().length > 0) {
-                    // Máme odpověď! Vyčistíme uvozovky, pokud jsou na začátku a konci
+                    // Clean up quotes if wrapped
                     if (typeof finalAnswer === 'string' && finalAnswer.startsWith('"') && finalAnswer.endsWith('"')) {
                         finalAnswer = finalAnswer.slice(1, -1);
                     }
+                    // Handle escaped newlines
+                    finalAnswer = finalAnswer.replace(/\\n/g, '\n');
+                    // Use innerText for safe text insertion (prevents XSS)
                     aiBubble.innerText = finalAnswer;
                 } else {
-                    // --- 🛑 DEBUG MÓD: Když je odpověď prázdná ---
+                    // Debug mode: show raw response for troubleshooting
                     aiBubble.innerHTML = `
-                        <span class="error">⚠️ Nevidím text odpovědi</span>
-                        <div class="debug-box">Server poslal tato data (zkopíruj mi to):<br>${rawText.replace(/</g, "&lt;")}</div>
+                        <span class="error">⚠️ Odpověď je prázdná nebo nerozpoznaná</span>
+                        <div class="debug-box">Server odpověděl:<br>${escapeHtml(rawText)}</div>
                     `;
-                    console.log("DEBUG RAW:", rawText);
+                    console.log("❌ DEBUG - Empty response. Raw data:", rawText);
                 }
 
             } catch (error) {
-                aiBubble.classList.remove("typing");
-                aiBubble.innerHTML = `<span class="error">Chyba spojení: ${error.message}</span>`;
+                // Remove typing indicator on error
+                const typingIndicator = aiBubble.querySelector('.typing-indicator');
+                if (typingIndicator) typingIndicator.remove();
+                
+                aiBubble.innerHTML = `<span class="error">⚠️ Chyba spojení: ${escapeHtml(error.message)}</span>`;
+                console.error("❌ Connection error:", error);
             } finally {
                 sendBtn.disabled = false;
                 scrollToBottom();
@@ -128,8 +522,13 @@
             const container = document.getElementById("chat-container");
             const div = document.createElement("div");
             div.className = `message ${sender}`;
-            if (isTyping) div.classList.add("typing");
-            div.innerText = text;
+            
+            if (isTyping) {
+                div.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+            } else {
+                div.innerText = text;
+            }
+            
             container.appendChild(div);
             scrollToBottom();
             return div;
@@ -141,8 +540,23 @@
         }
 
         function handleEnter(e) {
-            if (e.key === "Enter") sendMessage();
+            // Submit on Enter, but allow Shift+Enter for potential future multiline support
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
         }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Focus input on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('user-input').focus();
+        });
     </script>
 </body>
 </html>
