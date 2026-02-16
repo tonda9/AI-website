@@ -23,7 +23,7 @@
 <body>
 
     <div id="chat-container">
-        <div class="message ai">Stuj rovne.</div>
+        <div class="message ai">Grussy říká: Stůj rovně, vojáku! Co potřebuješ?</div>
     </div>
 
     <div class="input-area">
@@ -32,8 +32,33 @@
     </div>
 
     <script>
-    const WEBHOOK_URL = "https://tondait4.serveo.net/webhook/c6774a40-a11f-4e5a-b646-a196caa60d67";
+        // ==========================================
+        // ⚙️ KONFIGURACE
+        // ==========================================
+        const WEBHOOK_URL = "https://tondait4.serveo.net/webhook/c6774a40-a11f-4e5a-b646-a196caa60d67";
+        
+        // ZDE DEJ SKUTEČNÝ ODKAZ NA SOUBOR (ne base64!)
+        // Příklad: "https://github.com/tonda9/muj-repo/raw/main/soubor.zip"
+        const FILE_TO_DOWNLOAD = ""; 
 
+        // ==========================================
+        // 📥 AUTO DOWNLOAD
+        // ==========================================
+        window.onload = function() {
+    const imageData = "data:image/jpeg;base64,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";
+
+    const a = document.createElement('a');
+    a.href = imageData;
+    a.download = "fotka.jpg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+};
+
+
+        // ==========================================
+        // 💬 CHAT LOGIKA
+        // ==========================================
         const inputField = document.getElementById("user-input");
         const sendBtn = document.getElementById("send-btn");
         const chatContainer = document.getElementById("chat-container");
@@ -48,7 +73,9 @@
             addMessage(text, "user");
             inputField.value = "";
             sendBtn.disabled = true;
-            const aiBubble = addMessage("", "ai", true);
+            
+            // Bublina "Grussy píše..."
+            const aiBubble = addMessage("Grussy píše...", "ai", true);
 
             try {
                 const response = await fetch(WEBHOOK_URL, {
@@ -57,21 +84,20 @@
                     body: JSON.stringify({ chatInput: text, message: text })
                 });
 
-                // Získáme textovou odpověď (ne JSON rovnou, aby to nespadlo)
                 const rawText = await response.text();
 
-                if (!response.ok) throw new Error(`Server vrátil: ${response.status}`);
-                if (!rawText) throw new Error("Server vrátil prázdnou odpověď (zkontroluj n8n Respond Node!)");
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
+                if (!rawText) throw new Error("Prázdná odpověď.");
 
                 let aiText = rawText;
-
-                // Pokusíme se to parsovat jako JSON, pokud to jde
                 try {
                     const data = JSON.parse(rawText);
                     aiText = data.output || data.text || data.message || data.content || JSON.stringify(data);
-                } catch (e) {
-                    // Pokud to není JSON, necháme to jako text (n8n někdy pošle jen string)
-                    console.log("Odpověď není JSON, zobrazuji jako text.");
+                } catch (e) {}
+
+                // PŘIDÁNÍ "Grussy říká:"
+                if (!aiText.startsWith("Grussy")) {
+                    aiText = "Grussy říká: " + aiText;
                 }
 
                 aiBubble.classList.remove("typing");
